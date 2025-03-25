@@ -1,41 +1,44 @@
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
-from streamlit_app import STREAMLIT_APPS
-import datetime
+from webdriver_manager.chrome import ChromeDriverManager
+import time
 
-# Set up Selenium webdriver
-options = webdriver.ChromeOptions()
-options.add_argument('--headless')
-driver = webdriver.Chrome(options=options)
+# Add your Streamlit app URLs here
+STREAMLIT_APPS = [
+    "https://app-demogit-mybvkhnzd5ux26xaqhu2na.streamlit.app/",
+]
 
-# Initialize log file
-with open("wakeup_log.txt", "a") as log_file:
-    log_file.write(f"Execution started at: {datetime.datetime.now()}\n")
-
-    # Iterate through each URL in the list
-    for url in STREAMLIT_APPS:
+def wake_up_streamlit():
+    chrome_options = Options()
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    chrome_options.add_argument('--disable-gpu')
+    
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    
+    for app_url in STREAMLIT_APPS:
         try:
-            # Navigate to the webpage
-            driver.get(url)
+            print(f"Attempting to wake up: {app_url}")
+            driver.get(app_url)
             
-            # Wait for the page to load
-            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-
-            # Check if the wake up button exists
-            try:
-                button = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.XPATH, "//button[text()='Yes, get this app back up!']"))
-                )
-                button.click()
-                log_file.write(f"[{datetime.datetime.now()}] Successfully woke up app at: {url}\n")
-            except TimeoutException:
-                log_file.write(f"[{datetime.datetime.now()}] Button not found for app at: {url}\n")
-        
+            # 等待頁面加載（最多等待60秒）
+            WebDriverWait(driver, 60).until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
+            
+            print(f"Successfully loaded: {app_url}")
+            time.sleep(5)  # 等待5秒確保頁面完全加載
+            
         except Exception as e:
-            log_file.write(f"[{datetime.datetime.now()}] Error for app at {url}: {str(e)}\n")
+            print(f"Error waking up {app_url}: {str(e)}")
+    
+    driver.quit()
 
-# Close the browser
-driver.quit()
+if __name__ == "__main__":
+    wake_up_streamlit()
